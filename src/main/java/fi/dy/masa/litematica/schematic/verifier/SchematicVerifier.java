@@ -29,6 +29,8 @@ import fi.dy.masa.malilib.util.StringUtils;
 import fi.dy.masa.malilib.util.data.Color4f;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.materials.MaterialListBase;
+import fi.dy.masa.litematica.materials.MaterialListVerifier;
 import fi.dy.masa.litematica.render.infohud.IInfoHudRenderer;
 import fi.dy.masa.litematica.render.infohud.InfoHud;
 import fi.dy.masa.litematica.render.infohud.RenderPhase;
@@ -78,10 +80,21 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
     private int clientBlocks;
     private int correctStatesCount;
     private IgnoreBlockRegistry ignoreBlockRegistry;
+    @Nullable private MaterialListBase materialList;
 
     public SchematicVerifier()
     {
         this.name = StringUtils.translate("litematica.gui.label.schematic_verifier.verifier");
+    }
+
+    public MaterialListBase getMaterialList()
+    {
+        if (this.materialList == null)
+        {
+            this.materialList = new MaterialListVerifier(this, this.schematicPlacement != null ? this.schematicPlacement.getName() : "Verifier");
+        }
+
+        return this.materialList;
     }
 
     public static void clearActiveVerifiers()

@@ -4,6 +4,9 @@ import javax.annotation.Nullable;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.config.Hotkeys;
 import fi.dy.masa.litematica.gui.GuiMainMenu.ButtonListenerChangeMenu;
+import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.materials.MaterialListBase;
+import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.litematica.gui.GuiSchematicVerifier.BlockMismatchEntry;
 import fi.dy.masa.litematica.gui.widgets.WidgetListSchematicVerificationResults;
 import fi.dy.masa.litematica.gui.widgets.WidgetSchematicVerificationResult;
@@ -540,7 +543,15 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
                     break;
 
                 case MATERIAL_LIST:
+                {
+                    MaterialListBase materialList = this.parent.verifier.getMaterialList();
+                    materialList.reCreateMaterialList();
+                    DataManager.setMaterialList(materialList);
+                    GuiMaterialList gui = new GuiMaterialList(materialList);
+                    gui.setParent(this.parent);
+                    GuiBase.openGui(gui);
                     break;
+                }
 
                 case IGNORE_REDSTONE_STATES:
                     break;
