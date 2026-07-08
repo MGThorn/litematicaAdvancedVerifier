@@ -33,13 +33,14 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
     private static SchematicVerifier verifierLast;
     // static to remember the mode over GUI close/open cycles
     private static MismatchType resultMode = MismatchType.ALL;
+    private static boolean simpleMode = false;
 
     private final SchematicPlacement placement;
     private final SchematicVerifier verifier;
 
     public GuiSchematicVerifier(SchematicPlacement placement)
     {
-        super(10, 60);
+        super(10, 82);
 
         this.title = StringUtils.translate("litematica.gui.title.schematic_verifier", placement.getName());
         this.placement = placement;
@@ -63,7 +64,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
     @Override
     protected int getBrowserHeight()
     {
-        return this.getScreenHeight() - 94;
+        return this.getScreenHeight() - 116;
     }
 
     @Override
@@ -83,6 +84,13 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
         x += this.createButton(x, y, -1, ButtonListener.Type.SET_LIST_TYPE) + 4;
         x += this.createButton(x, y, -1, ButtonListener.Type.RESET_IGNORED) + 4;
         this.createButton(x, y, -1, ButtonListener.Type.TOGGLE_INFO_HUD);
+        y += 22;
+
+        x = 12;
+        x += this.createButton(x, y, -1, ButtonListener.Type.TOGGLE_SIMPLE_MODE) + 4;
+        x += this.createButton(x, y, -1, ButtonListener.Type.MATERIAL_LIST) + 4;
+        x += this.createButton(x, y, -1, ButtonListener.Type.IGNORE_REDSTONE_STATES) + 4;
+        this.createButton(x, y, -1, ButtonListener.Type.IGNORE_WATERLOGGED);
         y += 22;
 
         x = 12;
@@ -227,6 +235,22 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
                 label = StringUtils.translate("litematica.gui.button.schematic_verifier.toggle_info_hud", str);
                 break;
             }
+
+            case TOGGLE_SIMPLE_MODE:
+                label = simpleMode ? "Normal Mode" : "Simple Mode";
+                break;
+
+            case MATERIAL_LIST:
+                label = "Material List";
+                break;
+
+            case IGNORE_REDSTONE_STATES:
+                label = "Ignore Redstone States";
+                break;
+
+            case IGNORE_WATERLOGGED:
+                label = "Ignore Waterlogged";
+                break;
 
             default:
         }
@@ -510,6 +534,19 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
                     }
 
                     break;
+
+                case TOGGLE_SIMPLE_MODE:
+                    simpleMode = !simpleMode;
+                    break;
+
+                case MATERIAL_LIST:
+                    break;
+
+                case IGNORE_REDSTONE_STATES:
+                    break;
+
+                case IGNORE_WATERLOGGED:
+                    break;
             }
 
             this.parent.initGui(); // Re-create buttons/text fields
@@ -529,7 +566,11 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             RESET_VERIFIER,
             SET_LIST_TYPE,
             RESET_IGNORED,
-            TOGGLE_INFO_HUD;
+            TOGGLE_INFO_HUD,
+            TOGGLE_SIMPLE_MODE,
+            MATERIAL_LIST,
+            IGNORE_REDSTONE_STATES,
+            IGNORE_WATERLOGGED;
         }
     }
 }
