@@ -17,6 +17,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 
@@ -241,6 +242,39 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         this.updateMismatchOverlays();
     }
 
+    public void toggleSimpleModeWrongCategory()
+    {
+        MismatchType[] wrongTypes = { MismatchType.WRONG_BLOCK, MismatchType.WRONG_STATE, MismatchType.EXTRA, MismatchType.MISSING };
+        boolean allSelected = true;
+
+        for (MismatchType type : wrongTypes)
+        {
+            if (!this.selectedCategories.contains(type))
+            {
+                allSelected = false;
+                break;
+            }
+        }
+
+        if (allSelected)
+        {
+            for (MismatchType type : wrongTypes)
+            {
+                this.selectedCategories.remove(type);
+            }
+        }
+        else
+        {
+            for (MismatchType type : wrongTypes)
+            {
+                this.selectedCategories.add(type);
+                this.removeSelectedEntriesOfType(type);
+            }
+        }
+
+        this.updateMismatchOverlays();
+    }
+
     public void toggleMismatchEntrySelected(BlockMismatch mismatch)
     {
         MismatchType type = mismatch.mismatchType;
@@ -266,6 +300,14 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
     public boolean isMismatchCategorySelected(MismatchType type)
     {
         return this.selectedCategories.contains(type);
+    }
+
+    public boolean isSimpleModeWrongCategorySelected()
+    {
+        return this.selectedCategories.contains(MismatchType.WRONG_BLOCK) &&
+               this.selectedCategories.contains(MismatchType.WRONG_STATE) &&
+               this.selectedCategories.contains(MismatchType.EXTRA) &&
+               this.selectedCategories.contains(MismatchType.MISSING);
     }
 
     public boolean isMismatchEntrySelected(BlockMismatch mismatch)
@@ -559,6 +601,24 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         {
             this.updateMismatchOverlays();
         }
+    }
+
+    public void ignoreAllMismatchesForBlock(Block block)
+    {
+        MismatchType[] types = { MismatchType.WRONG_BLOCK, MismatchType.WRONG_STATE, MismatchType.EXTRA, MismatchType.MISSING };
+
+        for (MismatchType type : types)
+        {
+            for (BlockMismatch mismatch : this.getMismatchOverviewFor(type))
+            {
+                if (mismatch.stateExpected.getBlock() == block)
+                {
+                    this.ignoreStateMismatch(mismatch, false);
+                }
+            }
+        }
+
+        this.updateMismatchOverlays();
     }
 
     public void addIgnoredStateMismatches(Collection<BlockMismatch> ignore)

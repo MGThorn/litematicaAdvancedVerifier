@@ -67,12 +67,14 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
     @Override
     protected int getBrowserHeight()
     {
-        return this.getScreenHeight() - 116;
+        return this.getScreenHeight() - (simpleMode ? 94 : 116);
     }
 
     @Override
     public void initGui()
     {
+        this.setListPosition(10, simpleMode ? 60 : 82);
+        this.reCreateListWidget();
         super.initGui();
 
         int x = 12;
@@ -96,17 +98,20 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
         this.createButton(x, y, -1, ButtonListener.Type.IGNORE_WATERLOGGED);
         y += 22;
 
-        x = 12;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_ALL) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_WRONG_BLOCKS) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_WRONG_STATES) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_EXTRA) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_MISSING) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_CORRECT) + 4;
-
-        if (Configs.Generic.ENABLE_DIFFERENT_BLOCKS.getBooleanValue())
+        if (!simpleMode)
         {
-            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_DIFF_BLOCKS) + 4;
+            x = 12;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_ALL) + 4;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_WRONG_BLOCKS) + 4;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_WRONG_STATES) + 4;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_EXTRA) + 4;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_MISSING) + 4;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_CORRECT) + 4;
+
+            if (Configs.Generic.ENABLE_DIFFERENT_BLOCKS.getBooleanValue())
+            {
+                x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_DIFF_BLOCKS) + 4;
+            }
         }
 
         y = this.getScreenHeight() - 36;
@@ -240,7 +245,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             }
 
             case TOGGLE_SIMPLE_MODE:
-                label = simpleMode ? "Normal Mode" : "Simple Mode";
+                label = simpleMode ? "Simple Mode" : "Normal Mode";
                 break;
 
             case MATERIAL_LIST:
@@ -280,6 +285,11 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
         return resultMode;
     }
 
+    public static boolean isSimpleMode()
+    {
+        return simpleMode;
+    }
+
     private void setResultMode(MismatchType type)
     {
         resultMode = type;
@@ -309,7 +319,14 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             // Category title - show all mismatches of that type
             else if (entry.type == BlockMismatchEntry.Type.CATEGORY_TITLE)
             {
-                this.verifier.toggleMismatchCategorySelected(entry.mismatchType);
+                if (entry.mismatchType != null)
+                {
+                    this.verifier.toggleMismatchCategorySelected(entry.mismatchType);
+                }
+                else
+                {
+                    this.verifier.toggleSimpleModeWrongCategory();
+                }
             }
             // A specific mismatch pair - show only those state pairs
             else if (entry.type == BlockMismatchEntry.Type.DATA && entry.blockMismatch != null)
@@ -350,6 +367,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
         public final String header1;
         @Nullable
         public final String header2;
+        public final boolean simpleModeGrouped;
 
         public BlockMismatchEntry(@Nullable MismatchType mismatchType, @Nullable String title)
         {
@@ -358,6 +376,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             this.blockMismatch = null;
             this.header1 = title;
             this.header2 = null;
+            this.simpleModeGrouped = false;
         }
 
         public BlockMismatchEntry(@Nullable String header1, @Nullable String header2)
@@ -367,6 +386,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             this.blockMismatch = null;
             this.header1 = header1;
             this.header2 = header2;
+            this.simpleModeGrouped = false;
         }
 
         public BlockMismatchEntry(@Nullable MismatchType mismatchType, @Nullable BlockMismatch blockMismatch)
@@ -376,6 +396,17 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             this.blockMismatch = blockMismatch;
             this.header1 = null;
             this.header2 = null;
+            this.simpleModeGrouped = false;
+        }
+
+        public BlockMismatchEntry(boolean simpleModeGrouped, @Nullable MismatchType mismatchType, @Nullable BlockMismatch blockMismatch)
+        {
+            this.type = Type.DATA;
+            this.mismatchType = mismatchType;
+            this.blockMismatch = blockMismatch;
+            this.header1 = null;
+            this.header2 = null;
+            this.simpleModeGrouped = simpleModeGrouped;
         }
 
         @Override
@@ -388,6 +419,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             result = prime * result + ((header2 == null) ? 0 : header2.hashCode());
             result = prime * result + ((mismatchType == null) ? 0 : mismatchType.hashCode());
             result = prime * result + ((type == null) ? 0 : type.hashCode());
+            result = prime * result + (simpleModeGrouped ? 1 : 0);
             return result;
         }
 
@@ -425,6 +457,8 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             if (mismatchType != other.mismatchType)
                 return false;
             if (type != other.type)
+                return false;
+            if (simpleModeGrouped != other.simpleModeGrouped)
                 return false;
             return true;
         }
@@ -540,6 +574,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
 
                 case TOGGLE_SIMPLE_MODE:
                     simpleMode = !simpleMode;
+                    if (simpleMode) { resultMode = MismatchType.ALL; }
                     break;
 
                 case MATERIAL_LIST:

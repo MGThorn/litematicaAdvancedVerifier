@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import fi.dy.masa.malilib.gui.widgets.WidgetListBase;
@@ -86,7 +87,11 @@ public class WidgetListSchematicVerificationResults extends WidgetListBase<Block
 
         MismatchType type = this.guiSchematicVerifier.getResultMode();
 
-        if (type == MismatchType.ALL)
+        if (GuiSchematicVerifier.isSimpleMode())
+        {
+            this.addAllEntriesAsWrong();
+        }
+        else if (type == MismatchType.ALL)
         {
             this.addEntriesForType(MismatchType.WRONG_BLOCK);
             if (Configs.Generic.ENABLE_DIFFERENT_BLOCKS.getBooleanValue())
@@ -110,6 +115,39 @@ public class WidgetListSchematicVerificationResults extends WidgetListBase<Block
             this.scrollBar.setValue(lastScrollbarPosition);
             this.scrollbarRestored = true;
             this.reCreateListEntryWidgets();
+        }
+    }
+
+    private void addAllEntriesAsWrong()
+    {
+        this.listContents.add(new BlockMismatchEntry((MismatchType) null, TXT_BOLD + StringUtils.translate("litematica.gui.label.schematic_verifier_display_type.wrong") + TXT_RST));
+
+        Object2IntOpenHashMap<Block> countByBlock = new Object2IntOpenHashMap<>();
+        Object2ObjectOpenHashMap<Block, BlockState> stateByBlock = new Object2ObjectOpenHashMap<>();
+
+        for (MismatchType type : new MismatchType[]{ MismatchType.WRONG_BLOCK, MismatchType.WRONG_STATE, MismatchType.EXTRA, MismatchType.MISSING })
+        {
+            for (BlockMismatch mismatch : this.guiSchematicVerifier.getPlacement().getSchematicVerifier().getMismatchOverviewFor(type))
+            {
+                Block block = mismatch.stateExpected.getBlock();
+                countByBlock.addTo(block, mismatch.count);
+                stateByBlock.putIfAbsent(block, mismatch.stateExpected);
+            }
+        }
+
+        List<BlockMismatch> combined = new ArrayList<>();
+
+        for (Block block : countByBlock.keySet())
+        {
+            BlockState state = stateByBlock.get(block);
+            combined.add(new BlockMismatch(MismatchType.WRONG_BLOCK, state, state, countByBlock.getInt(block)));
+        }
+
+        combined.sort(this.sorter);
+
+        for (BlockMismatch mismatch : combined)
+        {
+            this.listContents.add(new BlockMismatchEntry(true, MismatchType.WRONG_BLOCK, mismatch));
         }
     }
 
