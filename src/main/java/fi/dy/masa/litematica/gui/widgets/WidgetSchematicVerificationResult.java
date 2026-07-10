@@ -222,6 +222,11 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
         }
         else if (this.mismatchEntry.type == BlockMismatchEntry.Type.DATA)
         {
+            if (this.mismatchEntry.simpleModeGrouped && this.mismatchEntry.blockMismatch != null)
+            {
+                return this.verifier.isSimpleModeEntrySelected(this.mismatchEntry.blockMismatch.stateExpected.getBlock());
+            }
+
             return this.verifier.isMismatchEntrySelected(this.mismatchEntry.blockMismatch);
         }
 

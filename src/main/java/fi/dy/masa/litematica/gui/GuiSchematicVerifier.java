@@ -331,7 +331,14 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             // A specific mismatch pair - show only those state pairs
             else if (entry.type == BlockMismatchEntry.Type.DATA && entry.blockMismatch != null)
             {
-                this.verifier.toggleMismatchEntrySelected(entry.blockMismatch);
+                if (GuiSchematicVerifier.isSimpleMode())
+                {
+                    this.verifier.toggleSimpleModeEntrySelected(entry.blockMismatch.stateExpected.getBlock());
+                }
+                else
+                {
+                    this.verifier.toggleMismatchEntrySelected(entry.blockMismatch);
+                }
             }
 
             if (Configs.InfoOverlays.VERIFIER_OVERLAY_ENABLED.getBooleanValue() == false)

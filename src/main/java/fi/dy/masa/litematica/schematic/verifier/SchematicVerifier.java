@@ -63,6 +63,7 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
     private final List<BlockPos> diffBlocksPositionsClosest = new ArrayList<>();
     private final Set<MismatchType> selectedCategories = new HashSet<>();
     private final HashMultimap<MismatchType, BlockMismatch> selectedEntries = HashMultimap.create();
+    private final Set<Block> simpleModeSelectedBlocks = new HashSet<>();
     private final Set<ChunkPos> requiredChunks = new HashSet<>();
     private final Set<BlockPos> recheckQueue = new HashSet<>();
     private final Minecraft mc = Minecraft.getInstance();
@@ -256,6 +257,8 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
             }
         }
 
+        this.simpleModeSelectedBlocks.clear();
+
         if (allSelected)
         {
             for (MismatchType type : wrongTypes)
@@ -273,6 +276,32 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         }
 
         this.updateMismatchOverlays();
+    }
+
+    public void toggleSimpleModeEntrySelected(Block block)
+    {
+        MismatchType[] wrongTypes = { MismatchType.WRONG_BLOCK, MismatchType.WRONG_STATE, MismatchType.EXTRA, MismatchType.MISSING };
+
+        for (MismatchType type : wrongTypes)
+        {
+            this.selectedCategories.remove(type);
+        }
+
+        if (this.simpleModeSelectedBlocks.contains(block))
+        {
+            this.simpleModeSelectedBlocks.remove(block);
+        }
+        else
+        {
+            this.simpleModeSelectedBlocks.add(block);
+        }
+
+        this.updateMismatchOverlays();
+    }
+
+    public boolean isSimpleModeEntrySelected(Block block)
+    {
+        return this.simpleModeSelectedBlocks.contains(block);
     }
 
     public void toggleMismatchEntrySelected(BlockMismatch mismatch)
@@ -425,6 +454,7 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         this.correctStateCounts.clear();
         this.selectedCategories.clear();
         this.selectedEntries.clear();
+        this.simpleModeSelectedBlocks.clear();
         this.mismatchBlockPositionsForRender.clear();
         this.mismatchPositionsForRender.clear();
 
@@ -896,6 +926,16 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         if (this.selectedCategories.contains(type))
         {
             listOut.addAll(sourceMap.values());
+        }
+        else if (!this.simpleModeSelectedBlocks.isEmpty())
+        {
+            for (Map.Entry<Pair<BlockState, BlockState>, Collection<BlockPos>> mapEntry : sourceMap.asMap().entrySet())
+            {
+                if (this.simpleModeSelectedBlocks.contains(mapEntry.getKey().getLeft().getBlock()))
+                {
+                    listOut.addAll(mapEntry.getValue());
+                }
+            }
         }
         else
         {
