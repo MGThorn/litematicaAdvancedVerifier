@@ -253,12 +253,20 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
                 break;
 
             case IGNORE_REDSTONE_STATES:
-                label = "Ignore Redstone States";
+            {
+                boolean val = Configs.Generic.IGNORE_REDSTONE_STATES.getBooleanValue();
+                String str = (val ? TXT_GREEN : TXT_RED) + (val ? "ON" : "OFF") + TXT_RST;
+                label = "Ignore Redstone States: " + str;
                 break;
+            }
 
             case IGNORE_WATERLOGGED:
-                label = "Ignore Waterlogged";
+            {
+                boolean val = Configs.Generic.IGNORE_WATERLOGGED_STATES.getBooleanValue();
+                String str = (val ? TXT_GREEN : TXT_RED) + (val ? "ON" : "OFF") + TXT_RST;
+                label = "Ignore Waterlogged: " + str;
                 break;
+            }
 
             default:
         }
@@ -596,9 +604,13 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
                 }
 
                 case IGNORE_REDSTONE_STATES:
+                    Configs.Generic.IGNORE_REDSTONE_STATES.setBooleanValue(!Configs.Generic.IGNORE_REDSTONE_STATES.getBooleanValue());
+                    this.parent.verifier.updateMismatchOverlays();
                     break;
 
                 case IGNORE_WATERLOGGED:
+                    Configs.Generic.IGNORE_WATERLOGGED_STATES.setBooleanValue(!Configs.Generic.IGNORE_WATERLOGGED_STATES.getBooleanValue());
+                    this.parent.verifier.updateMismatchOverlays();
                     break;
             }
 

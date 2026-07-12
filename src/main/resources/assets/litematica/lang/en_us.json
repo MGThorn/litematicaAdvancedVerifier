@@ -722,6 +722,7 @@
     "litematica.gui.button.material_list.list_type": "Show: %s",
     "litematica.gui.button.material_list.refresh_list": "Refresh",
     "litematica.gui.button.material_list.toggle_info_hud": "Info HUD: %s",
+    "litematica.gui.button.material_list.replace_water_with_ice": "Replace Water/Ice: %s",
     "litematica.gui.button.material_list.write_to_file": "Write to file",
     "litematica.gui.button.material_list.write_to_json": "Raw Materials",
     "litematica.gui.button.mirror_value": "Mirror: %s",

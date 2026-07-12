@@ -10,6 +10,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -124,11 +125,12 @@ public class MaterialListHudRenderer implements IInfoHudRenderer
         for (int i = 0; i < size; ++i)
         {
             MaterialListEntry entry = list.get(i);
-            maxTextLength = Math.max(maxTextLength, font.width(entry.getStack().getHoverName().getString()));
+            ItemStack stack = resolveStack(entry.getStack());
+            maxTextLength = Math.max(maxTextLength, font.width(stack.getHoverName().getString()));
             int multiplier = this.materialList.getMultiplier();
             int count = multiplier == 1 ? entry.getCountMissing() - entry.getCountAvailable() : entry.getCountTotal();
             count *= multiplier;
-            String strCount = GuiBase.TXT_RED + this.getFormattedCountString(count, entry.getStack().getMaxStackSize()) + GuiBase.TXT_RST;
+            String strCount = GuiBase.TXT_RED + this.getFormattedCountString(count, stack.getMaxStackSize()) + GuiBase.TXT_RST;
             maxCountLength = Math.max(maxCountLength, font.width(strCount));
         }
 
@@ -175,7 +177,7 @@ public class MaterialListHudRenderer implements IInfoHudRenderer
 
         for (int i = 0; i < size; ++i)
         {
-			ctx.renderItem(list.get(i).getStack(), x, y);
+			ctx.renderItem(resolveStack(list.get(i).getStack()), x, y);
             y += lineHeight;
         }
 
@@ -190,11 +192,12 @@ public class MaterialListHudRenderer implements IInfoHudRenderer
         for (int i = 0; i < size; ++i)
         {
             MaterialListEntry entry = list.get(i);
-            String text = entry.getStack().getHoverName().getString();
+            ItemStack stack = resolveStack(entry.getStack());
+            String text = stack.getHoverName().getString();
             int multiplier = this.materialList.getMultiplier();
             int count = multiplier == 1 ? entry.getCountMissing() - entry.getCountAvailable() : entry.getCountTotal();
             count *= multiplier;
-            String strCount = this.getFormattedCountString(count, entry.getStack().getMaxStackSize());
+            String strCount = this.getFormattedCountString(count, stack.getMaxStackSize());
             int cntLen = font.width(strCount);
             int cntPosX = posX + maxLineLength - cntLen - 2;
 
@@ -210,6 +213,17 @@ public class MaterialListHudRenderer implements IInfoHudRenderer
         }
 
         return contentHeight + 4;
+    }
+
+    private static ItemStack resolveStack(ItemStack stack)
+    {
+        if (Configs.Generic.MATERIAL_LIST_REPLACE_WATER_WITH_ICE.getBooleanValue() &&
+            stack.is(Items.WATER_BUCKET))
+        {
+            return new ItemStack(Items.ICE);
+        }
+
+        return stack;
     }
 
     protected String getFormattedCountString(int count, int maxStackSize)

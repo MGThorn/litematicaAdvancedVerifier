@@ -19,6 +19,8 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.chunk.ChunkAccess;
 
 import fi.dy.masa.malilib.gui.GuiBase;
@@ -661,6 +663,26 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         this.updateMismatchOverlays();
     }
 
+    public void ignoreAllMismatchesOfType(MismatchType type)
+    {
+        ArrayListMultimap<Pair<BlockState, BlockState>, BlockPos> map = this.getMapForMismatchType(type);
+
+        if (map == null)
+        {
+            return;
+        }
+
+        for (Pair<BlockState, BlockState> pair : new ArrayList<>(map.keySet()))
+        {
+            this.ignoredMismatches.add(Pair.of(pair.getLeft(), pair.getRight()));
+        }
+
+        this.blockMismatches.entrySet().removeIf(e -> e.getValue().mismatchType == type);
+        map.clear();
+
+        this.updateMismatchOverlays();
+    }
+
     public void resetIgnoredStateMismatches()
     {
         this.ignoredMismatches.clear();
@@ -715,8 +737,21 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
 
     private void addCountFor(MismatchType mismatchType, ArrayListMultimap<Pair<BlockState, BlockState>, BlockPos> map, List<BlockMismatch> list)
     {
+        boolean ignoreWaterlogged = Configs.Generic.IGNORE_WATERLOGGED_STATES.getBooleanValue();
+        boolean ignoreRedstone = Configs.Generic.IGNORE_REDSTONE_STATES.getBooleanValue();
+
         for (Pair<BlockState, BlockState> pair : map.keySet())
         {
+            if (ignoreWaterlogged && isWaterloggedOnlyDifference(pair.getLeft(), pair.getRight()))
+            {
+                continue;
+            }
+
+            if (ignoreRedstone && isRedstoneOnlyDifference(pair.getLeft(), pair.getRight()))
+            {
+                continue;
+            }
+
             list.add(new BlockMismatch(mismatchType, pair.getLeft(), pair.getRight(), map.get(pair).size()));
         }
     }
@@ -879,7 +914,49 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         }
     }
 
-    private void updateMismatchOverlays()
+    private static boolean isWaterloggedOnlyDifference(BlockState stateExpected, BlockState stateFound)
+    {
+        if (stateExpected.getBlock() != stateFound.getBlock() ||
+            !stateExpected.hasProperty(BlockStateProperties.WATERLOGGED))
+        {
+            return false;
+        }
+
+        boolean expectedWaterlogged = stateExpected.getValue(BlockStateProperties.WATERLOGGED);
+        return stateFound.setValue(BlockStateProperties.WATERLOGGED, expectedWaterlogged).equals(stateExpected);
+    }
+
+    private static final Set<Property<?>> REDSTONE_PROPERTIES = Set.of(
+        BlockStateProperties.POWER,
+        BlockStateProperties.POWERED,
+        BlockStateProperties.EXTENDED,
+        BlockStateProperties.ENABLED,
+        BlockStateProperties.TRIGGERED,
+        BlockStateProperties.LIT,
+        BlockStateProperties.LOCKED,
+        BlockStateProperties.OPEN
+    );
+
+    private static boolean isRedstoneOnlyDifference(BlockState stateExpected, BlockState stateFound)
+    {
+        if (stateExpected.getBlock() != stateFound.getBlock() || stateExpected.equals(stateFound))
+        {
+            return false;
+        }
+
+        for (Property<?> property : stateExpected.getProperties())
+        {
+            if (!stateExpected.getValue(property).equals(stateFound.getValue(property)) &&
+                !REDSTONE_PROPERTIES.contains(property))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public void updateMismatchOverlays()
     {
         if (this.mc.player != null)
         {
@@ -923,15 +1000,33 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
 
         //List<BlockPos> tempList = new ArrayList<>();
 
+        boolean ignoreWaterlogged = Configs.Generic.IGNORE_WATERLOGGED_STATES.getBooleanValue();
+        boolean ignoreRedstone = Configs.Generic.IGNORE_REDSTONE_STATES.getBooleanValue();
+
         if (this.selectedCategories.contains(type))
         {
-            listOut.addAll(sourceMap.values());
+            for (Map.Entry<Pair<BlockState, BlockState>, Collection<BlockPos>> entry : sourceMap.asMap().entrySet())
+            {
+                BlockState left = entry.getKey().getLeft();
+                BlockState right = entry.getKey().getRight();
+
+                if ((!ignoreWaterlogged || !isWaterloggedOnlyDifference(left, right)) &&
+                    (!ignoreRedstone || !isRedstoneOnlyDifference(left, right)))
+                {
+                    listOut.addAll(entry.getValue());
+                }
+            }
         }
         else if (!this.simpleModeSelectedBlocks.isEmpty())
         {
             for (Map.Entry<Pair<BlockState, BlockState>, Collection<BlockPos>> mapEntry : sourceMap.asMap().entrySet())
             {
-                if (this.simpleModeSelectedBlocks.contains(mapEntry.getKey().getLeft().getBlock()))
+                BlockState left = mapEntry.getKey().getLeft();
+                BlockState right = mapEntry.getKey().getRight();
+
+                if (this.simpleModeSelectedBlocks.contains(left.getBlock()) &&
+                    (!ignoreWaterlogged || !isWaterloggedOnlyDifference(left, right)) &&
+                    (!ignoreRedstone || !isRedstoneOnlyDifference(left, right)))
                 {
                     listOut.addAll(mapEntry.getValue());
                 }
@@ -943,6 +1038,16 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
 
             for (BlockMismatch mismatch : mismatches)
             {
+                if (ignoreWaterlogged && isWaterloggedOnlyDifference(mismatch.stateExpected, mismatch.stateFound))
+                {
+                    continue;
+                }
+
+                if (ignoreRedstone && isRedstoneOnlyDifference(mismatch.stateExpected, mismatch.stateFound))
+                {
+                    continue;
+                }
+
                 MUTABLE_PAIR.setLeft(mismatch.stateExpected);
                 MUTABLE_PAIR.setRight(mismatch.stateFound);
                 listOut.addAll(sourceMap.get(MUTABLE_PAIR));

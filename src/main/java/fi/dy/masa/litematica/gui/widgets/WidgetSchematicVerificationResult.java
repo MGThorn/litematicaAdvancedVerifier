@@ -53,6 +53,7 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
     private final int count;
     private final boolean isOdd;
     @Nullable private final ButtonGeneric buttonIgnore;
+    @Nullable private final ButtonGeneric buttonIgnoreAll;
 
     public WidgetSchematicVerificationResult(int x, int y, int width, int height, boolean isOdd,
             WidgetListSchematicVerificationResults listWidget, GuiSchematicVerifier guiSchematicVerifier,
@@ -77,6 +78,7 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
             this.mismatchInfo = null;
             this.count = 0;
             this.buttonIgnore = null;
+            this.buttonIgnoreAll = null;
         }
         // Category title
         else if (entry.header1 != null)
@@ -87,6 +89,15 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
             this.mismatchInfo = null;
             this.count = 0;
             this.buttonIgnore = null;
+
+            if (entry.mismatchType != null && entry.mismatchType != MismatchType.CORRECT_STATE)
+            {
+                this.buttonIgnoreAll = this.createButton(this.x + this.width, y + 1, ButtonListener.ButtonType.IGNORE_ALL_IN_CATEGORY);
+            }
+            else
+            {
+                this.buttonIgnoreAll = null;
+            }
         }
         // Mismatch entry
         else
@@ -96,6 +107,7 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
             this.header3 = null;
             this.mismatchInfo = new BlockMismatchInfo(entry.blockMismatch.stateExpected, entry.blockMismatch.stateFound);
             this.count = entry.blockMismatch.count;
+            this.buttonIgnoreAll = null;
 
             if (entry.mismatchType != MismatchType.CORRECT_STATE)
             {
@@ -204,6 +216,7 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
     {
         return this.mismatchEntry.type != BlockMismatchEntry.Type.HEADER &&
                (this.buttonIgnore == null || click.x() < this.buttonIgnore.getX()) &&
+               (this.buttonIgnoreAll == null || click.x() < this.buttonIgnoreAll.getX()) &&
                super.canSelectAt(click);
     }
 
@@ -656,11 +669,20 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
 				}
 				this.guiSchematicVerifier.initGui();
 			}
+			else if (this.type == ButtonType.IGNORE_ALL_IN_CATEGORY)
+			{
+				if (this.mismatchEntry.mismatchType != null)
+				{
+					this.guiSchematicVerifier.getPlacement().getSchematicVerifier().ignoreAllMismatchesOfType(this.mismatchEntry.mismatchType);
+				}
+				this.guiSchematicVerifier.initGui();
+			}
 		}
 
 		public enum ButtonType
 		{
-			IGNORE_MISMATCH("litematica.gui.button.schematic_verifier.ignore");
+			IGNORE_MISMATCH("litematica.gui.button.schematic_verifier.ignore"),
+			IGNORE_ALL_IN_CATEGORY("Ignore All");
 
 			private final String translationKey;
 
