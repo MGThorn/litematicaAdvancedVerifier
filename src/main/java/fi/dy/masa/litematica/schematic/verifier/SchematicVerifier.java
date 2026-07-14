@@ -17,7 +17,10 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.level.chunk.ChunkAccess;
 
 import fi.dy.masa.malilib.gui.GuiBase;
@@ -29,6 +32,8 @@ import fi.dy.masa.malilib.util.position.IntBoundingBox;
 import fi.dy.masa.malilib.util.position.LayerRange;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.materials.MaterialListBase;
+import fi.dy.masa.litematica.materials.MaterialListVerifier;
 import fi.dy.masa.litematica.render.infohud.IInfoHudRenderer;
 import fi.dy.masa.litematica.render.infohud.InfoHud;
 import fi.dy.masa.litematica.render.infohud.RenderPhase;
@@ -60,6 +65,7 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
     private final List<BlockPos> diffBlocksPositionsClosest = new ArrayList<>();
     private final Set<MismatchType> selectedCategories = new HashSet<>();
     private final HashMultimap<MismatchType, BlockMismatch> selectedEntries = HashMultimap.create();
+    private final Set<Block> simpleModeSelectedBlocks = new HashSet<>();
     private final Set<ChunkPos> requiredChunks = new HashSet<>();
     private final Set<BlockPos> recheckQueue = new HashSet<>();
     private final Minecraft mc = Minecraft.getInstance();
@@ -78,10 +84,21 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
     private int clientBlocks;
     private int correctStatesCount;
     private IgnoreBlockRegistry ignoreBlockRegistry;
+    @Nullable private MaterialListBase materialList;
 
     public SchematicVerifier()
     {
         this.name = StringUtils.translate("litematica.gui.label.schematic_verifier.verifier");
+    }
+
+    public MaterialListBase getMaterialList()
+    {
+        if (this.materialList == null)
+        {
+            this.materialList = new MaterialListVerifier(this, this.schematicPlacement != null ? this.schematicPlacement.getName() : "Verifier");
+        }
+
+        return this.materialList;
     }
 
     public static void clearActiveVerifiers()
@@ -228,6 +245,67 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         this.updateMismatchOverlays();
     }
 
+    public void toggleSimpleModeWrongCategory()
+    {
+        MismatchType[] wrongTypes = { MismatchType.WRONG_BLOCK, MismatchType.WRONG_STATE, MismatchType.EXTRA, MismatchType.MISSING };
+        boolean allSelected = true;
+
+        for (MismatchType type : wrongTypes)
+        {
+            if (!this.selectedCategories.contains(type))
+            {
+                allSelected = false;
+                break;
+            }
+        }
+
+        this.simpleModeSelectedBlocks.clear();
+
+        if (allSelected)
+        {
+            for (MismatchType type : wrongTypes)
+            {
+                this.selectedCategories.remove(type);
+            }
+        }
+        else
+        {
+            for (MismatchType type : wrongTypes)
+            {
+                this.selectedCategories.add(type);
+                this.removeSelectedEntriesOfType(type);
+            }
+        }
+
+        this.updateMismatchOverlays();
+    }
+
+    public void toggleSimpleModeEntrySelected(Block block)
+    {
+        MismatchType[] wrongTypes = { MismatchType.WRONG_BLOCK, MismatchType.WRONG_STATE, MismatchType.EXTRA, MismatchType.MISSING };
+
+        for (MismatchType type : wrongTypes)
+        {
+            this.selectedCategories.remove(type);
+        }
+
+        if (this.simpleModeSelectedBlocks.contains(block))
+        {
+            this.simpleModeSelectedBlocks.remove(block);
+        }
+        else
+        {
+            this.simpleModeSelectedBlocks.add(block);
+        }
+
+        this.updateMismatchOverlays();
+    }
+
+    public boolean isSimpleModeEntrySelected(Block block)
+    {
+        return this.simpleModeSelectedBlocks.contains(block);
+    }
+
     public void toggleMismatchEntrySelected(BlockMismatch mismatch)
     {
         MismatchType type = mismatch.mismatchType;
@@ -253,6 +331,14 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
     public boolean isMismatchCategorySelected(MismatchType type)
     {
         return this.selectedCategories.contains(type);
+    }
+
+    public boolean isSimpleModeWrongCategorySelected()
+    {
+        return this.selectedCategories.contains(MismatchType.WRONG_BLOCK) &&
+               this.selectedCategories.contains(MismatchType.WRONG_STATE) &&
+               this.selectedCategories.contains(MismatchType.EXTRA) &&
+               this.selectedCategories.contains(MismatchType.MISSING);
     }
 
     public boolean isMismatchEntrySelected(BlockMismatch mismatch)
@@ -370,6 +456,7 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         this.correctStateCounts.clear();
         this.selectedCategories.clear();
         this.selectedEntries.clear();
+        this.simpleModeSelectedBlocks.clear();
         this.mismatchBlockPositionsForRender.clear();
         this.mismatchPositionsForRender.clear();
 
@@ -548,12 +635,50 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         }
     }
 
+    public void ignoreAllMismatchesForBlock(Block block)
+    {
+        MismatchType[] types = { MismatchType.WRONG_BLOCK, MismatchType.WRONG_STATE, MismatchType.EXTRA, MismatchType.MISSING };
+
+        for (MismatchType type : types)
+        {
+            for (BlockMismatch mismatch : this.getMismatchOverviewFor(type))
+            {
+                if (mismatch.stateExpected.getBlock() == block)
+                {
+                    this.ignoreStateMismatch(mismatch, false);
+                }
+            }
+        }
+
+        this.updateMismatchOverlays();
+    }
+
     public void addIgnoredStateMismatches(Collection<BlockMismatch> ignore)
     {
         for (BlockMismatch mismatch : ignore)
         {
             this.ignoreStateMismatch(mismatch, false);
         }
+
+        this.updateMismatchOverlays();
+    }
+
+    public void ignoreAllMismatchesOfType(MismatchType type)
+    {
+        ArrayListMultimap<Pair<BlockState, BlockState>, BlockPos> map = this.getMapForMismatchType(type);
+
+        if (map == null)
+        {
+            return;
+        }
+
+        for (Pair<BlockState, BlockState> pair : new ArrayList<>(map.keySet()))
+        {
+            this.ignoredMismatches.add(Pair.of(pair.getLeft(), pair.getRight()));
+        }
+
+        this.blockMismatches.entrySet().removeIf(e -> e.getValue().mismatchType == type);
+        map.clear();
 
         this.updateMismatchOverlays();
     }
@@ -612,8 +737,21 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
 
     private void addCountFor(MismatchType mismatchType, ArrayListMultimap<Pair<BlockState, BlockState>, BlockPos> map, List<BlockMismatch> list)
     {
+        boolean ignoreWaterlogged = Configs.Generic.IGNORE_WATERLOGGED_STATES.getBooleanValue();
+        boolean ignoreRedstone = Configs.Generic.IGNORE_REDSTONE_STATES.getBooleanValue();
+
         for (Pair<BlockState, BlockState> pair : map.keySet())
         {
+            if (ignoreWaterlogged && isWaterloggedOnlyDifference(pair.getLeft(), pair.getRight()))
+            {
+                continue;
+            }
+
+            if (ignoreRedstone && isRedstoneOnlyDifference(pair.getLeft(), pair.getRight()))
+            {
+                continue;
+            }
+
             list.add(new BlockMismatch(mismatchType, pair.getLeft(), pair.getRight(), map.get(pair).size()));
         }
     }
@@ -776,7 +914,49 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         }
     }
 
-    private void updateMismatchOverlays()
+    private static boolean isWaterloggedOnlyDifference(BlockState stateExpected, BlockState stateFound)
+    {
+        if (stateExpected.getBlock() != stateFound.getBlock() ||
+            !stateExpected.hasProperty(BlockStateProperties.WATERLOGGED))
+        {
+            return false;
+        }
+
+        boolean expectedWaterlogged = stateExpected.getValue(BlockStateProperties.WATERLOGGED);
+        return stateFound.setValue(BlockStateProperties.WATERLOGGED, expectedWaterlogged).equals(stateExpected);
+    }
+
+    private static final Set<Property<?>> REDSTONE_PROPERTIES = Set.of(
+        BlockStateProperties.POWER,
+        BlockStateProperties.POWERED,
+        BlockStateProperties.EXTENDED,
+        BlockStateProperties.ENABLED,
+        BlockStateProperties.TRIGGERED,
+        BlockStateProperties.LIT,
+        BlockStateProperties.LOCKED,
+        BlockStateProperties.OPEN
+    );
+
+    private static boolean isRedstoneOnlyDifference(BlockState stateExpected, BlockState stateFound)
+    {
+        if (stateExpected.getBlock() != stateFound.getBlock() || stateExpected.equals(stateFound))
+        {
+            return false;
+        }
+
+        for (Property<?> property : stateExpected.getProperties())
+        {
+            if (!stateExpected.getValue(property).equals(stateFound.getValue(property)) &&
+                !REDSTONE_PROPERTIES.contains(property))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public void updateMismatchOverlays()
     {
         if (this.mc.player != null)
         {
@@ -820,9 +1000,37 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
 
         //List<BlockPos> tempList = new ArrayList<>();
 
+        boolean ignoreWaterlogged = Configs.Generic.IGNORE_WATERLOGGED_STATES.getBooleanValue();
+        boolean ignoreRedstone = Configs.Generic.IGNORE_REDSTONE_STATES.getBooleanValue();
+
         if (this.selectedCategories.contains(type))
         {
-            listOut.addAll(sourceMap.values());
+            for (Map.Entry<Pair<BlockState, BlockState>, Collection<BlockPos>> entry : sourceMap.asMap().entrySet())
+            {
+                BlockState left = entry.getKey().getLeft();
+                BlockState right = entry.getKey().getRight();
+
+                if ((!ignoreWaterlogged || !isWaterloggedOnlyDifference(left, right)) &&
+                    (!ignoreRedstone || !isRedstoneOnlyDifference(left, right)))
+                {
+                    listOut.addAll(entry.getValue());
+                }
+            }
+        }
+        else if (!this.simpleModeSelectedBlocks.isEmpty())
+        {
+            for (Map.Entry<Pair<BlockState, BlockState>, Collection<BlockPos>> mapEntry : sourceMap.asMap().entrySet())
+            {
+                BlockState left = mapEntry.getKey().getLeft();
+                BlockState right = mapEntry.getKey().getRight();
+
+                if (this.simpleModeSelectedBlocks.contains(left.getBlock()) &&
+                    (!ignoreWaterlogged || !isWaterloggedOnlyDifference(left, right)) &&
+                    (!ignoreRedstone || !isRedstoneOnlyDifference(left, right)))
+                {
+                    listOut.addAll(mapEntry.getValue());
+                }
+            }
         }
         else
         {
@@ -830,6 +1038,16 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
 
             for (BlockMismatch mismatch : mismatches)
             {
+                if (ignoreWaterlogged && isWaterloggedOnlyDifference(mismatch.stateExpected, mismatch.stateFound))
+                {
+                    continue;
+                }
+
+                if (ignoreRedstone && isRedstoneOnlyDifference(mismatch.stateExpected, mismatch.stateFound))
+                {
+                    continue;
+                }
+
                 MUTABLE_PAIR.setLeft(mismatch.stateExpected);
                 MUTABLE_PAIR.setRight(mismatch.stateFound);
                 listOut.addAll(sourceMap.get(MUTABLE_PAIR));

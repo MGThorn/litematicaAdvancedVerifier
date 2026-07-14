@@ -88,6 +88,8 @@ public class Configs implements IConfigHandler
         public static final ConfigBoolean       EASY_PLACE_SWING_HAND       = new ConfigBoolean("easyPlaceSwingHand", true).apply(GENERIC_KEY);
         public static final ConfigBoolean       EASY_PLACE_VANILLA_REACH    = new ConfigBoolean("easyPlaceVanillaReach", false).apply(GENERIC_KEY);
         public static final ConfigBoolean       ENABLE_DIFFERENT_BLOCKS     = new ConfigBoolean("enableDifferentBlocks", false).apply(GENERIC_KEY);
+        public static final ConfigBoolean       IGNORE_REDSTONE_STATES      = new ConfigBoolean("ignoreRedstoneStates", false).apply(GENERIC_KEY);
+        public static final ConfigBoolean       IGNORE_WATERLOGGED_STATES   = new ConfigBoolean("ignoreWaterloggedStates", false).apply(GENERIC_KEY);
         public static final ConfigBooleanHotkeyed ENTITY_DATA_SYNC          = new ConfigBooleanHotkeyed("entityDataSync", false, "").apply(GENERIC_KEY);
         public static final ConfigBoolean       ENTITY_DATA_SYNC_BACKUP     = new ConfigBoolean("entityDataSyncBackup", false).apply(GENERIC_KEY);
         public static final ConfigFloat         ENTITY_DATA_SYNC_CACHE_TIMEOUT= new ConfigFloat("entityDataSyncCacheTimeout", 2.75f, 1.0f, 100.0f).apply(GENERIC_KEY);
@@ -125,6 +127,7 @@ public class Configs implements IConfigHandler
         public static final ConfigInteger       PLACEMENT_MANAGER_THREAD_COUNT= new ConfigInteger("placementManagerThreadCount", 2, PlacementManagerDaemonHandler.MIN_PLATFORM_THREADS,
                                                                                                   MathUtils.max(PlacementManagerDaemonHandler.MAX_PLATFORM_THREADS, PlacementManagerDaemonHandler.MIN_PLATFORM_THREADS)).apply(GENERIC_KEY);
 //        public static final ConfigOptionList    PLACEMENT_MANAGER_PROFILE   = new ConfigOptionList("placementManagerProfile", PlacementManagerThreadProfile.DEFAULT).apply(GENERIC_KEY);
+        public static final ConfigBoolean       MATERIAL_LIST_REPLACE_WATER_WITH_ICE = new ConfigBoolean("materialListReplaceWaterWithIce", false).apply(GENERIC_KEY);
         public static final ConfigBoolean       RENDER_MATERIALS_IN_GUI     = new ConfigBoolean("renderMaterialListInGuis", true).apply(GENERIC_KEY);
         public static final ConfigBoolean       RENDER_THREAD_NO_TIMEOUT    = new ConfigBoolean("renderThreadNoTimeout", true).apply(GENERIC_KEY);
         public static final ConfigBoolean       REVERSE_OP_MODE_DIRECTION   = new ConfigBoolean("reverseOperationModeDirection", false).apply(GENERIC_KEY);
@@ -180,6 +183,8 @@ public class Configs implements IConfigHandler
                 FIX_STAIRS_MIRROR,
                 GENERATE_LOWERCASE_NAMES,
                 HIGHLIGHT_BLOCK_IN_INV,
+                IGNORE_REDSTONE_STATES,
+                IGNORE_WATERLOGGED_STATES,
                 ITEM_USE_PACKET_CHECK_BYPASS,
                 LAYER_MODE_DYNAMIC,
                 //LOAD_ENTIRE_SCHEMATICS,
@@ -206,6 +211,7 @@ public class Configs implements IConfigHandler
                 PLACEMENT_RESTRICTION,
                 PLACEMENT_RESTRICTION_WARN,
                 REVERSE_OP_MODE_DIRECTION,
+                MATERIAL_LIST_REPLACE_WATER_WITH_ICE,
                 RENDER_MATERIALS_IN_GUI,
                 RENDER_THREAD_NO_TIMEOUT,
                 SERVER_NBT_REQUEST_RATE,

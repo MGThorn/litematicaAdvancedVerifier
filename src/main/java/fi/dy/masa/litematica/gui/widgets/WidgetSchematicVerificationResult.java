@@ -50,6 +50,7 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
     private final int count;
     private final boolean isOdd;
     @Nullable private final ButtonGeneric buttonIgnore;
+    @Nullable private final ButtonGeneric buttonIgnoreAll;
 
     public WidgetSchematicVerificationResult(int x, int y, int width, int height, boolean isOdd,
             WidgetListSchematicVerificationResults listWidget, GuiSchematicVerifier guiSchematicVerifier,
@@ -73,6 +74,7 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
             this.mismatchInfo = null;
             this.count = 0;
             this.buttonIgnore = null;
+            this.buttonIgnoreAll = null;
         }
         // Category title
         else if (entry.header1 != null)
@@ -83,6 +85,15 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
             this.mismatchInfo = null;
             this.count = 0;
             this.buttonIgnore = null;
+
+            if (entry.mismatchType != null && entry.mismatchType != MismatchType.CORRECT_STATE)
+            {
+                this.buttonIgnoreAll = this.createButton(this.x + this.width, y + 1, ButtonListener.ButtonType.IGNORE_ALL_IN_CATEGORY);
+            }
+            else
+            {
+                this.buttonIgnoreAll = null;
+            }
         }
         // Mismatch entry
         else
@@ -92,6 +103,7 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
             this.header3 = null;
             this.mismatchInfo = new BlockMismatchInfo(entry.blockMismatch.stateExpected(), entry.blockMismatch.stateFound());
             this.count = entry.blockMismatch.count();
+            this.buttonIgnoreAll = null;
 
             if (entry.mismatchType != MismatchType.CORRECT_STATE)
             {
@@ -198,17 +210,32 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
     @Override
     public boolean canSelectAt(MouseButtonEvent click)
     {
-        return (this.buttonIgnore == null || click.x() < this.buttonIgnore.getX()) && super.canSelectAt(click);
+        return this.mismatchEntry.type != BlockMismatchEntry.Type.HEADER &&
+               (this.buttonIgnore == null || click.x() < this.buttonIgnore.getX()) &&
+               (this.buttonIgnoreAll == null || click.x() < this.buttonIgnoreAll.getX()) &&
+               super.canSelectAt(click);
     }
 
     protected boolean shouldRenderAsSelected()
     {
         if (this.mismatchEntry.type == BlockMismatchEntry.Type.CATEGORY_TITLE)
         {
-            return this.verifier.isMismatchCategorySelected(this.mismatchEntry.mismatchType);
+            if (this.mismatchEntry.mismatchType != null)
+            {
+                return this.verifier.isMismatchCategorySelected(this.mismatchEntry.mismatchType);
+            }
+            else
+            {
+                return this.verifier.isSimpleModeWrongCategorySelected();
+            }
         }
         else if (this.mismatchEntry.type == BlockMismatchEntry.Type.DATA)
         {
+            if (this.mismatchEntry.simpleModeGrouped && this.mismatchEntry.blockMismatch != null)
+            {
+                return this.verifier.isSimpleModeEntrySelected(this.mismatchEntry.blockMismatch.stateExpected().getBlock());
+            }
+
             return this.verifier.isMismatchEntrySelected(this.mismatchEntry.blockMismatch);
         }
 
@@ -271,7 +298,14 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
 
             if (this.mismatchEntry.mismatchType != MismatchType.CORRECT_STATE)
             {
-                this.drawString(ctx, x2 + 20, y, color, this.mismatchInfo.nameFound);
+                if (this.mismatchEntry.simpleModeGrouped)
+                {
+                    this.drawString(ctx, x2 + 4, y, color, StringUtils.translate("litematica.gui.label.schematic_verifier.mismatch"));
+                }
+                else
+                {
+                    this.drawString(ctx, x2 + 20, y, color, this.mismatchInfo.nameFound);
+                }
             }
 
             this.drawString(ctx, x3, y, color, String.valueOf(this.count));
@@ -282,11 +316,8 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
 //            boolean useBlockModelConfig = Configs.Visuals.SCHEMATIC_VERIFIER_BLOCK_MODELS.getBooleanValue();
             boolean useBlockModelConfig = false;
             boolean hasModelExpected = this.mismatchInfo.stateExpected.getRenderShape() == RenderShape.MODEL;
-            boolean hasModelFound    = this.mismatchInfo.stateFound.getRenderShape() == RenderShape.MODEL;
             boolean isAirItemExpected = this.mismatchInfo.stackExpected.isEmpty();
-            boolean isAirItemFound    = this.mismatchInfo.stackFound.isEmpty();
             boolean useBlockModelExpected = hasModelExpected && (isAirItemExpected || useBlockModelConfig || this.mismatchInfo.stateExpected.getBlock() == Blocks.FLOWER_POT);
-            boolean useBlockModelFound    = hasModelFound    && (isAirItemFound    || useBlockModelConfig || this.mismatchInfo.stateFound.getBlock() == Blocks.FLOWER_POT);
 //            BlockStateModel model;
 
             if (useBlockModelExpected && RenderUtils.stateModelHasQuads(this.mismatchInfo.stateExpected))
@@ -300,8 +331,12 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
 	            ctx.renderItemDecorations(this.textRenderer, this.mismatchInfo.stackExpected, x1, y);
             }
 
-            if (this.mismatchEntry.mismatchType != MismatchType.CORRECT_STATE)
+            if (this.mismatchEntry.mismatchType != MismatchType.CORRECT_STATE && !this.mismatchEntry.simpleModeGrouped)
             {
+                boolean hasModelFound = this.mismatchInfo.stateFound.getRenderShape() == RenderShape.MODEL;
+                boolean isAirItemFound = this.mismatchInfo.stackFound.isEmpty();
+                boolean useBlockModelFound = hasModelFound && (isAirItemFound || useBlockModelConfig || this.mismatchInfo.stateFound.getBlock() == Blocks.FLOWER_POT);
+
                 RenderUtils.drawRect(ctx, x2, y, 16, 16, 0x20FFFFFF); // light background for the item
 
                 if (useBlockModelFound && RenderUtils.stateModelHasQuads(this.mismatchInfo.stateFound))
@@ -620,14 +655,30 @@ public class WidgetSchematicVerificationResult extends WidgetListEntrySortable<B
 		{
 			if (this.type == ButtonType.IGNORE_MISMATCH)
 			{
-				this.guiSchematicVerifier.getPlacement().getSchematicVerifier().ignoreStateMismatch(this.mismatchEntry.blockMismatch);
+				if (this.mismatchEntry.simpleModeGrouped)
+				{
+					this.guiSchematicVerifier.getPlacement().getSchematicVerifier().ignoreAllMismatchesForBlock(this.mismatchEntry.blockMismatch.stateExpected().getBlock());
+				}
+				else
+				{
+					this.guiSchematicVerifier.getPlacement().getSchematicVerifier().ignoreStateMismatch(this.mismatchEntry.blockMismatch);
+				}
+				this.guiSchematicVerifier.initGui();
+			}
+			else if (this.type == ButtonType.IGNORE_ALL_IN_CATEGORY)
+			{
+				if (this.mismatchEntry.mismatchType != null)
+				{
+					this.guiSchematicVerifier.getPlacement().getSchematicVerifier().ignoreAllMismatchesOfType(this.mismatchEntry.mismatchType);
+				}
 				this.guiSchematicVerifier.initGui();
 			}
 		}
 
 		public enum ButtonType
 		{
-			IGNORE_MISMATCH("litematica.gui.button.schematic_verifier.ignore");
+			IGNORE_MISMATCH("litematica.gui.button.schematic_verifier.ignore"),
+			IGNORE_ALL_IN_CATEGORY("Ignore All");
 
 			private final String translationKey;
 
