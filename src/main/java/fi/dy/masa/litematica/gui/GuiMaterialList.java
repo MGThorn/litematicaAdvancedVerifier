@@ -101,8 +101,8 @@ public class GuiMaterialList extends GuiListBase<MaterialListEntry, WidgetMateri
         }
 
         x += this.createButtonOnOff(x, y, -1, this.materialList.getHideAvailable(), ButtonListener.Type.HIDE_AVAILABLE) + gap;
-        x += this.createButtonOnOff(x, y, -1, this.materialList.getHudRenderer().getShouldRenderCustom(), ButtonListener.Type.TOGGLE_INFO_HUD) + gap;
         x += this.createButtonOnOff(x, y, -1, Configs.Generic.MATERIAL_LIST_REPLACE_WATER_WITH_ICE.getBooleanValue(), ButtonListener.Type.REPLACE_WATER_WITH_ICE) + gap;
+        x += this.createButtonOnOff(x, y, -1, this.materialList.getHudRenderer().getShouldRenderCustom(), ButtonListener.Type.TOGGLE_INFO_HUD) + gap;
 
         if (isNarrow)
         {
