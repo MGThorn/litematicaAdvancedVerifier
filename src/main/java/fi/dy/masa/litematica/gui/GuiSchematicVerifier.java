@@ -4,6 +4,9 @@ import javax.annotation.Nullable;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.config.Hotkeys;
 import fi.dy.masa.litematica.gui.GuiMainMenu.ButtonListenerChangeMenu;
+import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.materials.MaterialListBase;
+import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.litematica.gui.GuiSchematicVerifier.BlockMismatchEntry;
 import fi.dy.masa.litematica.gui.widgets.WidgetListSchematicVerificationResults;
 import fi.dy.masa.litematica.gui.widgets.WidgetSchematicVerificationResult;
@@ -34,13 +37,14 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
     private static SchematicVerifier verifierLast;
     // static to remember the mode over GUI close/open cycles
     private static MismatchType resultMode = MismatchType.ALL;
+    private static boolean simpleMode = false;
 
     private final SchematicPlacement placement;
     private final SchematicVerifier verifier;
 
     public GuiSchematicVerifier(SchematicPlacement placement)
     {
-        super(10, 60);
+        super(10, 82);
 
         this.title = StringUtils.translate("litematica.gui.title.schematic_verifier", placement.getName());
         this.placement = placement;
@@ -64,12 +68,14 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
     @Override
     protected int getBrowserHeight()
     {
-        return this.getScreenHeight() - 94;
+        return this.getScreenHeight() - (simpleMode ? 94 : 116);
     }
 
     @Override
     public void initGui()
     {
+        this.setListPosition(10, simpleMode ? 60 : 82);
+        this.reCreateListWidget();
         super.initGui();
 
         int x = 12;
@@ -87,16 +93,26 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
         y += 22;
 
         x = 12;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_ALL) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_WRONG_BLOCKS) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_WRONG_STATES) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_EXTRA) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_MISSING) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_CORRECT) + 4;
+        x += this.createButton(x, y, -1, ButtonListener.Type.TOGGLE_SIMPLE_MODE) + 4;
+        x += this.createButton(x, y, -1, ButtonListener.Type.MATERIAL_LIST) + 4;
+        x += this.createButton(x, y, -1, ButtonListener.Type.IGNORE_REDSTONE_STATES) + 4;
+        this.createButton(x, y, -1, ButtonListener.Type.IGNORE_WATERLOGGED);
+        y += 22;
 
-        if (Configs.Generic.ENABLE_DIFFERENT_BLOCKS.getBooleanValue())
+        if (!simpleMode)
         {
-            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_DIFF_BLOCKS) + 4;
+            x = 12;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_ALL) + 4;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_WRONG_BLOCKS) + 4;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_WRONG_STATES) + 4;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_EXTRA) + 4;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_MISSING) + 4;
+            x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_CORRECT) + 4;
+
+            if (Configs.Generic.ENABLE_DIFFERENT_BLOCKS.getBooleanValue())
+            {
+                x += this.createButton(x, y, -1, ButtonListener.Type.SET_RESULT_MODE_DIFF_BLOCKS) + 4;
+            }
         }
 
         y = this.getScreenHeight() - 36;
@@ -229,6 +245,30 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
                 break;
             }
 
+            case TOGGLE_SIMPLE_MODE:
+                label = simpleMode ? "Simple Mode" : "Normal Mode";
+                break;
+
+            case MATERIAL_LIST:
+                label = "Material List";
+                break;
+
+            case IGNORE_REDSTONE_STATES:
+            {
+                boolean val = Configs.Generic.IGNORE_REDSTONE_STATES.getBooleanValue();
+                String str = (val ? TXT_GREEN : TXT_RED) + (val ? "ON" : "OFF") + TXT_RST;
+                label = "Ignore Redstone States: " + str;
+                break;
+            }
+
+            case IGNORE_WATERLOGGED:
+            {
+                boolean val = Configs.Generic.IGNORE_WATERLOGGED_STATES.getBooleanValue();
+                String str = (val ? TXT_GREEN : TXT_RED) + (val ? "ON" : "OFF") + TXT_RST;
+                label = "Ignore Waterlogged: " + str;
+                break;
+            }
+
             default:
         }
 
@@ -252,6 +292,11 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
     public MismatchType getResultMode()
     {
         return resultMode;
+    }
+
+    public static boolean isSimpleMode()
+    {
+        return simpleMode;
     }
 
     private void setResultMode(MismatchType type)
@@ -283,12 +328,26 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             // Category title - show all mismatches of that type
             else if (entry.type == BlockMismatchEntry.Type.CATEGORY_TITLE)
             {
-                this.verifier.toggleMismatchCategorySelected(entry.mismatchType);
+                if (entry.mismatchType != null)
+                {
+                    this.verifier.toggleMismatchCategorySelected(entry.mismatchType);
+                }
+                else
+                {
+                    this.verifier.toggleSimpleModeWrongCategory();
+                }
             }
             // A specific mismatch pair - show only those state pairs
             else if (entry.type == BlockMismatchEntry.Type.DATA && entry.blockMismatch != null)
             {
-                this.verifier.toggleMismatchEntrySelected(entry.blockMismatch);
+                if (GuiSchematicVerifier.isSimpleMode())
+                {
+                    this.verifier.toggleSimpleModeEntrySelected(entry.blockMismatch.stateExpected().getBlock());
+                }
+                else
+                {
+                    this.verifier.toggleMismatchEntrySelected(entry.blockMismatch);
+                }
             }
 
             if (Configs.InfoOverlays.VERIFIER_OVERLAY_ENABLED.getBooleanValue() == false)
@@ -324,6 +383,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
         public final String header1;
         @Nullable
         public final String header2;
+        public final boolean simpleModeGrouped;
 
         public BlockMismatchEntry(@Nullable MismatchType mismatchType, @Nullable String title)
         {
@@ -332,6 +392,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             this.blockMismatch = null;
             this.header1 = title;
             this.header2 = null;
+            this.simpleModeGrouped = false;
         }
 
         public BlockMismatchEntry(@Nullable String header1, @Nullable String header2)
@@ -341,6 +402,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             this.blockMismatch = null;
             this.header1 = header1;
             this.header2 = header2;
+            this.simpleModeGrouped = false;
         }
 
         public BlockMismatchEntry(@Nullable MismatchType mismatchType, @Nullable BlockMismatch blockMismatch)
@@ -350,6 +412,17 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             this.blockMismatch = blockMismatch;
             this.header1 = null;
             this.header2 = null;
+            this.simpleModeGrouped = false;
+        }
+
+        public BlockMismatchEntry(boolean simpleModeGrouped, @Nullable MismatchType mismatchType, @Nullable BlockMismatch blockMismatch)
+        {
+            this.type = Type.DATA;
+            this.mismatchType = mismatchType;
+            this.blockMismatch = blockMismatch;
+            this.header1 = null;
+            this.header2 = null;
+            this.simpleModeGrouped = simpleModeGrouped;
         }
 
         @Override
@@ -362,6 +435,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             result = prime * result + ((header2 == null) ? 0 : header2.hashCode());
             result = prime * result + ((mismatchType == null) ? 0 : mismatchType.hashCode());
             result = prime * result + ((type == null) ? 0 : type.hashCode());
+            result = prime * result + (simpleModeGrouped ? 1 : 0);
             return result;
         }
 
@@ -390,8 +464,10 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             }
             else if (!header2.equals(other.header2)) { return false; }
             if (mismatchType != other.mismatchType) { return false; }
+            if (type != other.type) { return false; }
+            if (simpleModeGrouped != other.simpleModeGrouped) { return false; }
 
-	        return type == other.type;
+            return true;
         }
 
         public enum Type
@@ -502,6 +578,32 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
                     }
 
                     break;
+
+                case TOGGLE_SIMPLE_MODE:
+                    simpleMode = !simpleMode;
+                    if (simpleMode) { resultMode = MismatchType.ALL; }
+                    break;
+
+                case MATERIAL_LIST:
+                {
+                    MaterialListBase materialList = this.parent.verifier.getMaterialList();
+                    materialList.reCreateMaterialList();
+                    DataManager.setMaterialList(materialList);
+                    GuiMaterialList gui = new GuiMaterialList(materialList);
+                    gui.setParent(this.parent);
+                    GuiBase.openGui(gui);
+                    break;
+                }
+
+                case IGNORE_REDSTONE_STATES:
+                    Configs.Generic.IGNORE_REDSTONE_STATES.setBooleanValue(!Configs.Generic.IGNORE_REDSTONE_STATES.getBooleanValue());
+                    this.parent.verifier.updateMismatchOverlays();
+                    break;
+
+                case IGNORE_WATERLOGGED:
+                    Configs.Generic.IGNORE_WATERLOGGED_STATES.setBooleanValue(!Configs.Generic.IGNORE_WATERLOGGED_STATES.getBooleanValue());
+                    this.parent.verifier.updateMismatchOverlays();
+                    break;
             }
 
             this.parent.initGui(); // Re-create buttons/text fields
@@ -521,7 +623,11 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             RESET_VERIFIER,
             SET_LIST_TYPE,
             RESET_IGNORED,
-            TOGGLE_INFO_HUD;
+            TOGGLE_INFO_HUD,
+            TOGGLE_SIMPLE_MODE,
+            MATERIAL_LIST,
+            IGNORE_REDSTONE_STATES,
+            IGNORE_WATERLOGGED;
         }
     }
 }
