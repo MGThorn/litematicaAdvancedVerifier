@@ -43,6 +43,7 @@ public class LitematicaBitArray
             );
         }
     };
+    //nothing
     /** The long array that is used to store the data for this BitArray. */
     private final long[] longArray;
     /** Number of bits a single entry takes up */
