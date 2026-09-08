@@ -122,6 +122,7 @@ public class GuiMaterialList extends GuiListBase<MaterialListEntry, WidgetMateri
         x += this.createButtonOnOff(x, y, -1, this.materialList.getHideAvailable(), ButtonListener.Type.HIDE_AVAILABLE) + gap;
         x += this.createButtonOnOff(x, y, -1, Configs.Generic.MATERIAL_LIST_REPLACE_WATER_WITH_ICE.getBooleanValue(), ButtonListener.Type.REPLACE_WATER_WITH_ICE) + gap;
         x += this.createButtonOnOff(x, y, -1, this.materialList.getHudRenderer().getShouldRenderCustom(), ButtonListener.Type.TOGGLE_INFO_HUD) + gap;
+        x += this.createButton(x, y, ButtonListener.Type.GROUP_ITEMS) + gap;
 
         if (this.isNarrow)
         {
@@ -236,6 +237,7 @@ public class GuiMaterialList extends GuiListBase<MaterialListEntry, WidgetMateri
         width += this.getStringWidth(ButtonListener.Type.CLEAR_CACHE.getDisplayName());
         width += this.getStringWidth(ButtonListener.Type.EXPORT.getDisplayName());
         width += this.getStringWidth(this.exportType.getDisplayName());
+        width += this.getStringWidth(ButtonListener.Type.GROUP_ITEMS.getDisplayName());
         width += (new ButtonOnOff(0, 0, -1, false, ButtonListener.Type.HIDE_AVAILABLE.getTranslationKey(), false)).getWidth();
         width += (new ButtonOnOff(0, 0, -1, false, ButtonListener.Type.TOGGLE_INFO_HUD.getTranslationKey(), false)).getWidth();
         width += (new ButtonOnOff(0, 0, -1, false, ButtonListener.Type.REPLACE_WATER_WITH_ICE.getTranslationKey(), false)).getWidth();
@@ -340,6 +342,10 @@ public class GuiMaterialList extends GuiListBase<MaterialListEntry, WidgetMateri
                 case REPLACE_WATER_WITH_ICE:
                     Configs.Generic.MATERIAL_LIST_REPLACE_WATER_WITH_ICE.setBooleanValue(
                         !Configs.Generic.MATERIAL_LIST_REPLACE_WATER_WITH_ICE.getBooleanValue());
+                    break;
+
+                case GROUP_ITEMS:
+                    MaterialListGroupUtils.applyGrouping(materialList);
                     break;
 
                 case CLEAR_IGNORED:
@@ -537,6 +543,7 @@ public class GuiMaterialList extends GuiListBase<MaterialListEntry, WidgetMateri
             HIDE_AVAILABLE      ("litematica.gui.button.material_list.hide_available"),
             TOGGLE_INFO_HUD     ("litematica.gui.button.material_list.toggle_info_hud"),
             REPLACE_WATER_WITH_ICE ("litematica.gui.button.material_list.replace_water_with_ice"),
+            GROUP_ITEMS         ("litematica.gui.button.material_list.group_items",  "litematica.gui.button.hover.material_list.group_items"),
             CLEAR_IGNORED       ("litematica.gui.button.material_list.clear_ignored"),
             CLEAR_CACHE         ("litematica.gui.button.material_list.clear_cache", "litematica.gui.button.hover.material_list.clear_cache"),
             EXPORT              ("litematica.gui.button.material_list.export",      "litematica.gui.button.hover.material_list.export_as"),

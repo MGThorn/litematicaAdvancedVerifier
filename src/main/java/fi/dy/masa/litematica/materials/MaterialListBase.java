@@ -181,6 +181,17 @@ public abstract class MaterialListBase implements IMaterialList
         }
     }
 
+    /**
+     * Switches to the {@link SortCriteria#GROUPED} sort criteria, which orders
+     * entries by their {@link MaterialListEntry#getGroupOrder()} value, as
+     * assigned by {@link MaterialListGroupUtils#applyGrouping(MaterialListBase)}.
+     */
+    public void setGroupedSort()
+    {
+        this.sortCriteria = SortCriteria.GROUPED;
+        this.reverse = false;
+    }
+
     public void setHideAvailable(boolean hideAvailable)
     {
         this.hideAvailable = hideAvailable;
@@ -262,6 +273,7 @@ public abstract class MaterialListBase implements IMaterialList
         COUNT_MISSING,
         COUNT_AVAILABLE,
 //        CACHE_ORDER,
+        GROUPED,
         ;
 
         public static SortCriteria fromStringStatic(String name)

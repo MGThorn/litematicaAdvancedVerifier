@@ -45,6 +45,10 @@ public class MaterialListSorter implements Comparator<MaterialListEntry>
 //
 //            return (priority1 < priority2) != reverse ? -1 : 1;
 //        }
+        else if (sortCriteria == SortCriteria.GROUPED)
+        {
+            return entry1.getGroupOrder() == entry2.getGroupOrder() ? nameCompare : ((entry1.getGroupOrder() < entry2.getGroupOrder()) != reverse ? -1 : 1);
+        }
 
         return reverse == false ? nameCompare * -1 : nameCompare;
     }

@@ -11,6 +11,7 @@ public class MaterialListEntry
     private final int countMissing;
     private final int countMismatched;
     private int countAvailable;
+    private int groupOrder = Integer.MAX_VALUE;
 
     public MaterialListEntry(ItemStack stack, int countTotal, int countMissing, int countMismatched, int countAvailable)
     {
@@ -58,6 +59,21 @@ public class MaterialListEntry
     public void setCountAvailable(int countAvailable)
     {
         this.countAvailable = countAvailable;
+    }
+
+    /**
+     * The position assigned to this entry the last time the material list
+     * was grouped via the "Group" button. Only meaningful while the
+     * list's sort criteria is {@link MaterialListBase.SortCriteria#GROUPED}.
+     */
+    public int getGroupOrder()
+    {
+        return this.groupOrder;
+    }
+
+    public void setGroupOrder(int groupOrder)
+    {
+        this.groupOrder = groupOrder;
     }
 
     @Override

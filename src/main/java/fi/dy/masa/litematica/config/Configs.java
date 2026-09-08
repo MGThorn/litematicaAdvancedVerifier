@@ -29,6 +29,7 @@ import fi.dy.masa.litematica.Litematica;
 import fi.dy.masa.litematica.Reference;
 import fi.dy.masa.litematica.compat.voxy.VoxyCompat;
 import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.materials.MaterialListGroupUtils;
 import fi.dy.masa.litematica.render.LitematicaDebugHud;
 import fi.dy.masa.litematica.schematic.placement.PlacementManagerDaemonHandler;
 import fi.dy.masa.litematica.selection.CornerSelectionMode;
@@ -106,6 +107,7 @@ public class Configs implements IConfigHandler
 //        public static final ConfigBoolean       MATERIAL_LIST_CONTAINER_SCAN_SHULKERS = new ConfigBoolean("materialListContainerScanShulkers", false).apply(GENERIC_KEY);
 //        public static final ConfigBoolean       MATERIAL_LIST_CONTAINER_SCAN_BUNDLES  = new ConfigBoolean("materialListContainerScanBundles", false).apply(GENERIC_KEY);
         public static final ConfigBoolean       MATERIAL_LIST_COUNT_ENDER_CACHE       = new ConfigBoolean("materialListCountEnderCache", false).apply(GENERIC_KEY);
+        public static final ConfigStringList    MATERIAL_LIST_GROUPS        = new ConfigStringList("materialListGroups", MaterialListGroupUtils.DEFAULT_GROUPINGS).apply(GENERIC_KEY);
         public static final ConfigBoolean       MATERIAL_LIST_IGNORE_STATE  = new ConfigBoolean("materialListIgnoreState", false).apply(GENERIC_KEY);
         public static final ConfigBoolean       MATERIAL_LIST_RECIPE_DETAILS= new ConfigBoolean("materialListRecipeDetails", true).apply(GENERIC_KEY);
         public static final ConfigBoolean       PASTE_ALWAYS_USE_FILL       = new ConfigBoolean("pasteAlwaysUseFill", false).apply(GENERIC_KEY);
@@ -189,6 +191,7 @@ public class Configs implements IConfigHandler
 //                MATERIAL_LIST_CONTAINER_SCAN_SHULKERS,
 //                MATERIAL_LIST_CONTAINER_SCAN_BUNDLES,
                 MATERIAL_LIST_COUNT_ENDER_CACHE,
+                MATERIAL_LIST_GROUPS,
                 MATERIAL_LIST_IGNORE_STATE,
                 MATERIAL_LIST_RECIPE_DETAILS,
                 PASTE_ALWAYS_USE_FILL,
