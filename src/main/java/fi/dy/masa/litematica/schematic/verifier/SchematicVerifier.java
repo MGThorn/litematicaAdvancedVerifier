@@ -16,6 +16,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -27,12 +29,15 @@ import fi.dy.masa.malilib.gui.GuiBase;
 import fi.dy.masa.malilib.gui.Message.MessageType;
 import fi.dy.masa.malilib.interfaces.ICompletionListener;
 import fi.dy.masa.malilib.util.IntBoundingBox;
+import fi.dy.masa.malilib.util.ItemType;
 import fi.dy.masa.malilib.util.LayerRange;
 import fi.dy.masa.malilib.util.StringUtils;
 import fi.dy.masa.malilib.util.data.Color4f;
 import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.litematica.data.DataManager;
+import fi.dy.masa.litematica.gui.GuiSchematicVerifier;
 import fi.dy.masa.litematica.materials.MaterialListBase;
+import fi.dy.masa.litematica.materials.MaterialListUtils;
 import fi.dy.masa.litematica.materials.MaterialListVerifier;
 import fi.dy.masa.litematica.render.infohud.IInfoHudRenderer;
 import fi.dy.masa.litematica.render.infohud.InfoHud;
@@ -66,6 +71,7 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
     private final Set<MismatchType> selectedCategories = new HashSet<>();
     private final HashMultimap<MismatchType, BlockMismatch> selectedEntries = HashMultimap.create();
     private final Set<Block> simpleModeSelectedBlocks = new HashSet<>();
+    private boolean inventorySelectionActive;
     private final Set<ChunkPos> requiredChunks = new HashSet<>();
     private final Set<BlockPos> recheckQueue = new HashSet<>();
     private final Minecraft mc = Minecraft.getInstance();
@@ -346,6 +352,91 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         return this.selectedEntries.containsValue(mismatch);
     }
 
+    public boolean isInventorySelectionActive()
+    {
+        return this.inventorySelectionActive;
+    }
+
+    /**
+     * Selects every currently listed mismatch whose expected item is present in the
+     * player's inventory, or clears the selection if it was already active from a
+     * previous click. Works in both simple and advanced result mode.
+     */
+    public void toggleInventorySelection()
+    {
+        this.clearSelection();
+
+        if (this.inventorySelectionActive)
+        {
+            this.inventorySelectionActive = false;
+        }
+        else
+        {
+            this.selectMismatchesFoundInPlayerInventory();
+            this.inventorySelectionActive = true;
+        }
+
+        this.updateMismatchOverlays();
+    }
+
+    private void selectMismatchesFoundInPlayerInventory()
+    {
+        Player player = this.mc.player;
+
+        if (player == null)
+        {
+            return;
+        }
+
+        GuiSchematicVerifier.InventoryIgnoreMode ignoreMode = GuiSchematicVerifier.getInventoryIgnoreMode();
+        boolean ignoreShulkers = ignoreMode == GuiSchematicVerifier.InventoryIgnoreMode.SHULKERS ||
+                                  ignoreMode == GuiSchematicVerifier.InventoryIgnoreMode.SHULKERS_AND_BUNDLES;
+        boolean ignoreBundles = ignoreMode == GuiSchematicVerifier.InventoryIgnoreMode.BUNDLES ||
+                                 ignoreMode == GuiSchematicVerifier.InventoryIgnoreMode.SHULKERS_AND_BUNDLES;
+
+        Object2IntOpenHashMap<ItemType> playerInvItems = MaterialListUtils.getInventoryItemCounts(player.getInventory(), ignoreShulkers, ignoreBundles);
+        boolean simpleMode = GuiSchematicVerifier.isSimpleMode();
+        List<MismatchType> types = new ArrayList<>(Arrays.asList(
+                MismatchType.WRONG_BLOCK, MismatchType.WRONG_STATE, MismatchType.EXTRA, MismatchType.MISSING));
+
+        if (!simpleMode && Configs.Generic.ENABLE_DIFFERENT_BLOCKS.getBooleanValue())
+        {
+            types.add(MismatchType.DIFF_BLOCK);
+        }
+
+        for (MismatchType type : types)
+        {
+            for (BlockMismatch mismatch : this.getMismatchOverviewFor(type))
+            {
+                ItemStack stack = ItemUtils.getItemForState(mismatch.stateExpected);
+
+                if (stack.isEmpty())
+                {
+                    continue;
+                }
+
+                if (playerInvItems.containsKey(new ItemType(stack, true, false)))
+                {
+                    if (simpleMode)
+                    {
+                        this.simpleModeSelectedBlocks.add(mismatch.stateExpected.getBlock());
+                    }
+                    else
+                    {
+                        this.selectedEntries.put(type, mismatch);
+                    }
+                }
+            }
+        }
+    }
+
+    private void clearSelection()
+    {
+        this.selectedCategories.clear();
+        this.selectedEntries.clear();
+        this.simpleModeSelectedBlocks.clear();
+    }
+
     private void clearActiveMismatchRenderPositions()
     {
         this.mismatchPositionsForRender.clear();
@@ -454,9 +545,8 @@ public class SchematicVerifier extends TaskBase implements IInfoHudRenderer
         this.wrongStatesPositions.clear();
         this.blockMismatches.clear();
         this.correctStateCounts.clear();
-        this.selectedCategories.clear();
-        this.selectedEntries.clear();
-        this.simpleModeSelectedBlocks.clear();
+        this.clearSelection();
+        this.inventorySelectionActive = false;
         this.mismatchBlockPositionsForRender.clear();
         this.mismatchPositionsForRender.clear();
 

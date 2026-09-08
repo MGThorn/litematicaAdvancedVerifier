@@ -162,6 +162,15 @@ public class MaterialListUtils
 
     public static Object2IntOpenHashMap<ItemType> getInventoryItemCounts(Container inv)
     {
+        return getInventoryItemCounts(inv, false, false);
+    }
+
+    /**
+     * @param ignoreShulkers if true, shulker boxes are skipped entirely instead of counting their contents
+     * @param ignoreBundles if true, bundles are skipped entirely instead of counting their contents
+     */
+    public static Object2IntOpenHashMap<ItemType> getInventoryItemCounts(Container inv, boolean ignoreShulkers, boolean ignoreBundles)
+    {
         Object2IntOpenHashMap<ItemType> map = new Object2IntOpenHashMap<>();
         final int slots = inv.getContainerSize();
 
@@ -177,6 +186,11 @@ public class MaterialListUtils
                     ((BlockItem) stack.getItem()).getBlock() instanceof ShulkerBoxBlock &&
                     InventoryUtils.shulkerBoxHasItems(stack))
                 {
+                    if (ignoreShulkers)
+                    {
+                        continue;
+                    }
+
                     Object2IntOpenHashMap<ItemType> boxCounts = getStoredItemCounts(stack);
 
                     for (ItemType boxType : boxCounts.keySet())
@@ -188,6 +202,11 @@ public class MaterialListUtils
                 }
                 else if (item instanceof BundleItem && InventoryUtils.bundleHasItems(stack))
                 {
+                    if (ignoreBundles)
+                    {
+                        continue;
+                    }
+
                     Object2IntOpenHashMap<ItemType> bundleCounts = getBundleItemCounts(stack);
 
                     for (ItemType bundleType : bundleCounts.keySet())

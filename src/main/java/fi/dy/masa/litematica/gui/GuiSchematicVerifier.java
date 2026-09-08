@@ -37,6 +37,7 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
     // static to remember the mode over GUI close/open cycles
     private static MismatchType resultMode = MismatchType.ALL;
     private static boolean simpleMode = false;
+    private static InventoryIgnoreMode inventoryIgnoreMode = InventoryIgnoreMode.NONE;
 
     private final SchematicPlacement placement;
     private final SchematicVerifier verifier;
@@ -67,13 +68,13 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
     @Override
     protected int getBrowserHeight()
     {
-        return this.getScreenHeight() - (simpleMode ? 94 : 116);
+        return this.getScreenHeight() - (simpleMode ? 116 : 138);
     }
 
     @Override
     public void initGui()
     {
-        this.setListPosition(10, simpleMode ? 60 : 82);
+        this.setListPosition(10, simpleMode ? 82 : 104);
         this.reCreateListWidget();
         super.initGui();
 
@@ -87,15 +88,20 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
         x += this.createButton(x, y, -1, ButtonListener.Type.STOP) + 4;
         x += this.createButton(x, y, -1, ButtonListener.Type.RESET_VERIFIER) + 4;
         x += this.createButton(x, y, -1, ButtonListener.Type.SET_LIST_TYPE) + 4;
-        x += this.createButton(x, y, -1, ButtonListener.Type.RESET_IGNORED) + 4;
-        this.createButton(x, y, -1, ButtonListener.Type.TOGGLE_INFO_HUD);
+        this.createButton(x, y, -1, ButtonListener.Type.RESET_IGNORED);
         y += 22;
 
         x = 12;
         x += this.createButton(x, y, -1, ButtonListener.Type.TOGGLE_SIMPLE_MODE) + 4;
         x += this.createButton(x, y, -1, ButtonListener.Type.MATERIAL_LIST) + 4;
+        x += this.createButton(x, y, -1, ButtonListener.Type.SELECT_INVENTORY) + 4;
+        this.createButton(x, y, -1, ButtonListener.Type.SELECT_INVENTORY_IGNORE);
+        y += 22;
+
+        x = 12;
         x += this.createButton(x, y, -1, ButtonListener.Type.IGNORE_REDSTONE_STATES) + 4;
-        this.createButton(x, y, -1, ButtonListener.Type.IGNORE_WATERLOGGED);
+        x += this.createButton(x, y, -1, ButtonListener.Type.IGNORE_WATERLOGGED) + 4;
+        this.createButton(x, y, -1, ButtonListener.Type.TOGGLE_INFO_HUD);
         y += 22;
 
         if (!simpleMode)
@@ -252,6 +258,14 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
                 label = "Material List";
                 break;
 
+            case SELECT_INVENTORY:
+                label = "Select Inventory";
+                break;
+
+            case SELECT_INVENTORY_IGNORE:
+                label = "Select Inventory Ignore: " + inventoryIgnoreMode.getDisplayName();
+                break;
+
             case IGNORE_REDSTONE_STATES:
             {
                 boolean val = Configs.Generic.IGNORE_REDSTONE_STATES.getBooleanValue();
@@ -296,6 +310,11 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
     public static boolean isSimpleMode()
     {
         return simpleMode;
+    }
+
+    public static InventoryIgnoreMode getInventoryIgnoreMode()
+    {
+        return inventoryIgnoreMode;
     }
 
     private void setResultMode(MismatchType type)
@@ -369,6 +388,37 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
     protected WidgetListSchematicVerificationResults createListWidget(int listX, int listY)
     {
         return new WidgetListSchematicVerificationResults(listX, listY, this.getBrowserWidth(), this.getBrowserHeight(), this);
+    }
+
+    /**
+     * What container contents to ignore when checking whether an item is
+     * present in the player's inventory for the "Select Inventory" button.
+     */
+    public enum InventoryIgnoreMode
+    {
+        NONE("None"),
+        BUNDLES("Bundles"),
+        SHULKERS("Shulkers"),
+        SHULKERS_AND_BUNDLES("Shulkers & Bundles");
+
+        private final String displayName;
+
+        InventoryIgnoreMode(String displayName)
+        {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName()
+        {
+            return this.displayName;
+        }
+
+        public InventoryIgnoreMode cycle(boolean forward)
+        {
+            InventoryIgnoreMode[] values = values();
+            int index = (this.ordinal() + (forward ? 1 : -1) + values.length) % values.length;
+            return values[index];
+        }
     }
 
     public static class BlockMismatchEntry
@@ -603,6 +653,14 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
                     break;
                 }
 
+                case SELECT_INVENTORY:
+                    this.parent.verifier.toggleInventorySelection();
+                    break;
+
+                case SELECT_INVENTORY_IGNORE:
+                    inventoryIgnoreMode = inventoryIgnoreMode.cycle(mouseButton == 0);
+                    break;
+
                 case IGNORE_REDSTONE_STATES:
                     Configs.Generic.IGNORE_REDSTONE_STATES.setBooleanValue(!Configs.Generic.IGNORE_REDSTONE_STATES.getBooleanValue());
                     this.parent.verifier.updateMismatchOverlays();
@@ -634,6 +692,8 @@ public class GuiSchematicVerifier   extends GuiListBase<BlockMismatchEntry, Widg
             TOGGLE_INFO_HUD,
             TOGGLE_SIMPLE_MODE,
             MATERIAL_LIST,
+            SELECT_INVENTORY,
+            SELECT_INVENTORY_IGNORE,
             IGNORE_REDSTONE_STATES,
             IGNORE_WATERLOGGED;
         }
