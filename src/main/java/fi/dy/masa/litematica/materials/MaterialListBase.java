@@ -272,7 +272,9 @@ public abstract class MaterialListBase implements IMaterialList
         COUNT_TOTAL,
         COUNT_MISSING,
         COUNT_AVAILABLE,
-        GROUPED;
+        GROUPED,
+//        CACHE_ORDER,
+        ;
 
         public static SortCriteria fromStringStatic(String name)
         {
