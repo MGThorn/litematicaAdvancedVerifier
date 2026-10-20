@@ -55,6 +55,7 @@ public class MaterialListVerifier extends MaterialListBase
 
         List<MaterialListEntry> entries = MaterialListUtils.getMaterialList(
                 countsTotal, countsMissing, countsMismatch,
+                new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(), new Object2IntOpenHashMap<>(),
                 Minecraft.getInstance().player);
 
         this.setMaterialListEntries(entries);
